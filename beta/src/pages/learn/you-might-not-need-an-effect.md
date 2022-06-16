@@ -45,7 +45,7 @@ function Form() {
 
 ## Caching expensive calculations {/*caching-expensive-calculations*/}
 
-This component computes `visibleTodos` by taking `allTodos` it receives by props and filtering them according to the currently chosen `filter` prop. You might feel tempted to update a state variable in an Effect:
+This component computes `visibleTodos` by taking the `todos` it receives by props and filtering them according to the currently chosen `filter` prop. You might feel tempted to update a state variable in an Effect:
 
 ```js {4-8}
 function TodoList({ todos, filter }) {
