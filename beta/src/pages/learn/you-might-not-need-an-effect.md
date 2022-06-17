@@ -25,6 +25,8 @@ Similar to [principles for structuring state](/learn/choosing-the-state-structur
 
 * **Keep the data flowing down.** In React, data flows from the parent components to their children. When you see something wrong on the screen, you can trace where the information comes from by going up the component chain until you find which component passes the wrong prop or has the wrong state. But if you have child components with Effects that update the state of their parent components, the data flow becomes more difficult to trace. When possible, avoid updating the parent component state from a child component's Effect. Instead, see if there's an appropriate event that the parent component can listen to.
 
+These principles might feel a bit abstract at first. The examples below will help you develop the right intuition!
+
 ## How to remove unnecessary Effects {/*how-to-remove-unnecessary-effects*/}
 
 To put these principles in practice, you will usually follow three steps:
@@ -35,7 +37,7 @@ To put these principles in practice, you will usually follow three steps:
 
 Let's look at the most common patterns, and how you can simplify them.
 
-### Updating state based on other state {/*updating-state-based-on-other-state*/}
+### Updating the state based on other state {/*updating-the-state-based-on-other-state*/}
 
 Suppose you have a component with two state variables: `firstName` and `lastName`. You want to calculate a `fullName` from them by concatenating them. Moreover, you'd like `fullName` to update whenever `firstName` or `lastName` change. Your first instinct might be to add a `fullName` state variable and update it in an effect:
 
@@ -85,7 +87,7 @@ Like in the earlier example, this is both unnecessary and inefficient. First, re
 function TodoList({ todos, filter }) {
   const [newTodo, setNewTodo] = useState('');
 
-  // This is fine if getFilteredTodos() is not slow.
+  // ✅ This is fine if getFilteredTodos() is not slow.
   const visibleTodos = getFilteredTodos(todos, filter);
 ```
 
@@ -99,18 +101,59 @@ import { useMemo, useState } from 'react';
 function TodoList({ todos, filter }) {
   const [newTodo, setNewTodo] = useState('');
 
-  // ✅ Does not re-run getFilteredTodos() unless todos or filter change
   const visibleTodos = useMemo(() => {
+    // ✅ Does not re-run unless todos or filter change
     return getFilteredTodos(todos, filter);
   }, [todos, filter]);
 ```
 
-**This tells React that you don't want the inner function to re-run unless either `todos` or `filter` have changed.** React will remember the return value of `getFilteredTodos()` during the initial render. During the next renders, it will check if `todos` or `filter` are different. If they're the same as last time, `useMemo` will return the last result it has stored. But if one of them changes, React will call the wrapped function again (and store _that_ result instead).
+Or, written as a single line:
 
-In other words, [`useMemo`](/apis/usememo) lets you skip re-running a calculation during re-renders if its inputs have not changed. Keep in mind that the function you wrap in [`useMemo`](/apis/usememo) runs during rendering, so it should be a [pure calculation](/learn/keeping-components-pure).
+```js {6-7}
+import { useMemo, useState } from 'react';
 
-## TODO: Moar sections {/*todo-moar-sections*/}
+function TodoList({ todos, filter }) {
+  const [newTodo, setNewTodo] = useState('');
+
+  // ✅ Does not re-run getFilteredTodos() unless todos or filter change
+  const visibleTodos = useMemo(() => getFilteredTodos(todos, filter), [todos, filter]);
+```
+
+**This tells React that you don't want the inner function to re-run unless either `todos` or `filter` have changed.** React will remember the return value of `getFilteredTodos()` during the initial render. During the next renders, it will check if `todos` or `filter` are different. If they're the same as last time, `useMemo` will return the last result it has stored. But if they are different, React will call the wrapped function again (and store _that_ result instead).
+
+The function you wrap in [`useMemo`](/apis/usememo) runs during rendering, so this only works for [pure calculations](/learn/keeping-components-pure).
+
+<DeepDive title="How to tell if a calculation is expensive?">
+
+In general, unless you're creating or looping over thousands of objects, it's probably not expensive. If you want to get more confidence, you can add a console log to measure the time spent in a piece of code:
+
+```js {1,3}
+console.time('filter array');
+const visibleTodos = getFilteredTodos(todos, filter);
+console.timeEnd('filter array');
+```
+
+Perform the interaction you're measuring (for example, typing into the input). You will then see logs like `filter array: 0.15ms` in your console. If the overall logged time adds up to a significant amount (say, `5ms` or more), it might make sense to memoize that calculation. As an experiment, you can then wrap the calculation in `useMemo` to verify whether the total logged time has significantly decreased:
+
+```js
+console.time('filter array');
+const visibleTodos = useMemo(() => {
+  return getFilteredTodos(todos, filter); // Skipped if todos and filter haven't changed
+}, [todos, filter]);
+console.timeEnd('filter array');
+```
+
+Keep in mind that your machine is probably faster than your users' so it's a good idea to test the performance with an artificial slowdown. For example, Chrome offers a [CPU Throttling](https://developer.chrome.com/blog/new-in-devtools-61/#throttling) option for this.
+
+Also note that measuring performance in development will not give you the most accurate results. (For example, when [Strict Mode](/apis/strictmode) is on, you will see each component render twice rather than once.) To get the most accurate timings, build your app for production and test it on a device like your users have.
+
+</DeepDive>
+
+### Resetting the state on a prop change {/*resetting-the-state-on-a-prop-change*/}
 
 TODO
 
+### Moar sections {/*moar-sections*/}
+
+TODO
 
