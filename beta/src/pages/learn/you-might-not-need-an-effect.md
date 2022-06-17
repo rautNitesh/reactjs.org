@@ -10,32 +10,20 @@ Effects are an escape hatch from the React paradigm. They let you "step outside"
 
 <YouWillLearn>
 
-* What to keep in mind when writing Effects
+* Why some Effects are unnecessary
 * How to remove unnecessary Effects from your components
 
 </YouWillLearn>
 
-## Principles for writing Effects {/*principles-for-writing-effects*/}
-
-Similar to [principles for structuring state](/learn/choosing-the-state-structure#principles-for-structuring-state), there are a few principles that can help you with writing Effects:
-
-* **Avoid cascading updates.** When you update your component's state, React will first call your component functions to calculate what should be on the screen. Then React will ["commit"](/learn/render-and-commit) these changes to the DOM, updating the screen. Then React will run your Effects. If your Effect *also* immediately updates the state, this restarts the whole process from scratch! React has to call your component functions again, and then update the DOM again. This is called a *cascading update*. Some cascading updates are unavoidable (for example, you might need to render a tooltip and measure its content size before you can decide how to position it). But in general, you should avoid cascading updates, and try to respond to every interaction with a single render pass.
-
-* **Keep interaction-specific logic in the event handlers.** Every interaction begins with an event. In the event handler, you have the most information about what happened: for example, you know which concrete button was pressed. If you update the state and then put some logic into the Effect, then by the time the Effect runs, you don't know *which* particular interaction has happened. Effects "lose" information about the cause of interaction, so they work best to [synchronize external systems with React:](/learn/synchronizing-with-effects#what-are-effects-and-how-are-they-different-from-events) for example, to keep a non-React widget in sync with the React state, or to keep the React state in sync with information from the network. In those cases, the cause of the interaction does not matter: you want to do something *as a result of rendering*. For specific interactions, like clicking a Buy button, it makes sense to put most logic into the event handler.
-
-* **Keep the data flowing down.** In React, data flows from the parent components to their children. When you see something wrong on the screen, you can trace where the information comes from by going up the component chain until you find which component passes the wrong prop or has the wrong state. But if you have child components with Effects that update the state of their parent components, the data flow becomes more difficult to trace. When possible, avoid updating the parent component state from a child component's Effect. Instead, see if there's an appropriate event that the parent component can listen to.
-
-These principles might feel a bit abstract at first. The examples below will help you develop the right intuition!
-
 ## How to remove unnecessary Effects {/*how-to-remove-unnecessary-effects*/}
 
-To put these principles in practice, you will usually follow three steps:
+To remove unnecessary Effects, follow these three steps:
 
-1. Calculate as much as you can during rendering.
-2. Move all the interaction-specific logic into the event handlers.
-3. Keep the remaining synchronization logic in Effects, if there is any left.
+1. **Calculate as much as you can during rendering.** It is a common mistake to write Effects that don't do anything other than updating a state variable in response to another state or a prop changing. This is very inefficient: React has just finished rendering, but your Effect updated the state and restarted the [rendering process](/learn/render-and-commit) from scratch. If you need to calculate something based on props and state, try to do it during rendering instead.
+2. **Move interaction-specific logic into event handlers.** Every interaction begins with an event. In the event handler, you know exactly what happened. By the time an Effect runs, you don't know *what* the user did (for example, which button was clicked). This is why you'll usually handle interactions in the event handlers.
+3. **Keep synchronization logic in Effects, if there is any.** Some logic needs to run *because* the component was rendered. For example, you might keep a non-React widget synchronized with the React state, or keep the React state synchronized with information from the network. In both of these cases, it doesn't matter which interaction caused the state to change. It only matters that the component needs to *remain synchronized* with some external system while it's on the screen. This kind of [synchronization logic](/learn/synchronizing-with-effects#what-are-effects-and-how-are-they-different-from-events) should remain in Effects.
 
-Let's look at the most common patterns, and how you can simplify them.
+Sometimes, this may feel more like art than science. The examples below will help you develop the right intuition.
 
 ### Updating the state based on other state {/*updating-the-state-based-on-other-state*/}
 
@@ -149,6 +137,11 @@ Also note that measuring performance in development will not give you the most a
 
 </DeepDive>
 
+### Handling an interaction {/*handling-an-interaction*/}
+
+TODO
+
+
 ### Resetting the state on a prop change {/*resetting-the-state-on-a-prop-change*/}
 
 TODO
@@ -156,4 +149,7 @@ TODO
 ### Moar sections {/*moar-sections*/}
 
 TODO
+
+
+## Principles for writing Effects {/*principles-for-writing-effects*/}
 
